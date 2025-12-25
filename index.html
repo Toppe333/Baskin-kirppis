@@ -104,3 +104,69 @@
            data-category="vaatteet"
            data-price="15">
         <h3>Naisten takki</h3>
+        <p class="price">15 €</p>
+        <p>Koko M, hyväkuntoinen.</p>
+      </div>
+
+      <div class="product"
+           data-name="Lasten kirjat"
+           data-category="kirjat"
+           data-price="8">
+        <h3>Lasten kirjat (5 kpl)</h3>
+        <p class="price">8 €</p>
+        <p>Hyvässä kunnossa, 6–9-vuotiaille.</p>
+      </div>
+
+      <div class="product"
+           data-name="Kahvinkeitin"
+           data-category="kodinkoneet"
+           data-price="12">
+        <h3>Kahvinkeitin</h3>
+        <p class="price">12 €</p>
+        <p>Toimiva ja puhdas.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const searchInput = document.getElementById("search");
+    const categorySelect = document.getElementById("category");
+    const maxPriceSelect = document.getElementById("maxPrice");
+    const products = document.querySelectorAll(".product");
+
+    function filterProducts() {
+      const search = searchInput.value.toLowerCase();
+      const category = categorySelect.value;
+      const maxPrice = maxPriceSelect.value;
+
+      products.forEach(product => {
+        const name = product.dataset.name.toLowerCase();
+        const productCategory = product.dataset.category;
+        const price = Number(product.dataset.price);
+
+        let visible = true;
+
+        if (search && !name.includes(search)) {
+          visible = false;
+        }
+
+        if (category && category !== productCategory) {
+          visible = false;
+        }
+
+        if (maxPrice && price > Number(maxPrice)) {
+          visible = false;
+        }
+
+        product.classList.toggle("hidden", !visible);
+      });
+    }
+
+    searchInput.addEventListener("input", filterProducts);
+    categorySelect.addEventListener("change", filterProducts);
+    maxPriceSelect.addEventListener("change", filterProducts);
+  </script>
+
+</body>
+</html>
