@@ -4,133 +4,256 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kirpputorimme</title>
+
   <style>
-    body { margin:0; font-family: system-ui, sans-serif; background:#fafafa; color:#222; }
-    .container { max-width:1000px; margin:auto; padding:20px; }
-    h1 { margin-top:10px; }
-    /* Haku & suodattimet */
-    .filters { display:flex; flex-wrap:wrap; gap:10px; margin:20px 0; }
-    .filters input, .filters select { padding:8px; font-size:1rem; }
-    /* Kategoriat ja tuotteet */
-    .category { margin-bottom:20px; border:1px solid #ccc; border-radius:6px; background:#fff; }
-    .category-header { padding:10px; cursor:pointer; background:#eee; font-weight:bold; }
-    .products { display:none; padding:10px; display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:20px; }
-    .product { background:white; padding:15px; border-radius:6px; box-shadow:0 2px 6px rgba(0,0,0,0.08); }
-    .product img { max-width:100%; height:auto; margin-bottom:10px; }
-    .price { font-weight:bold; color:#0a7; }
-    .hidden { display:none; }
-    .form-button { margin:10px 0; padding:10px 15px; font-size:1rem; }
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #fafafa;
+      color: #222;
+    }
+
+    .hero {
+      background-image: url("hero.jpg");
+      background-size: cover;
+      background-position: center;
+      height: 240px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-top: 10px;
+    }
+
+    /* HAKU & SUODATTIMET */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .filters input,
+    .filters select {
+      padding: 8px;
+      font-size: 1rem;
+    }
+
+    /* TUOTTEET */
+    .category {
+      margin-bottom: 20px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    .category h2 {
+      margin: 0;
+      padding: 10px 15px;
+      cursor: pointer;
+      background-color: #eee;
+      border-bottom: 1px solid #ddd;
+      user-select: none;
+    }
+
+    .products {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+      padding: 15px;
+    }
+
+    .product {
+      background: #fafafa;
+      padding: 15px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    .product img {
+      max-width: 100%;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+
+    .price {
+      font-weight: bold;
+      color: #0a7;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    /* LISÄÄ TUOTE -PAINIKE */
+    #addProductBtn {
+      padding: 10px 15px;
+      font-size: 1rem;
+      cursor: pointer;
+      background-color: #0a7;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+
+    #addProductBtn:hover {
+      background-color: #096;
+    }
   </style>
 </head>
+
 <body>
 
-<div class="container">
-  <h1>Kirpputorimme</h1>
-  <p>Hae ja selaa myynnissä olevia tuotteita.</p>
+  <div class="hero"></div>
 
-  <!-- Testipainike Formille -->
-  <button class="form-button" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLSdIDAiTJpmkdyjl1Z-TxRzU10z3ZpO14lJvlZul3QQmIcxVmg/viewform', '_blank')">Lisää tuote</button>
+  <div class="container">
+    <h1>Kirpputorimme</h1>
+    <p>Hae ja selaa myynnissä olevia tuotteita.</p>
 
-  <!-- Haku -->
-  <div class="filters">
-    <input type="text" id="search" placeholder="Hae tuotteita...">
-    <select id="maxPrice">
-      <option value="">Ei hintarajaa</option>
-      <option value="5">Alle 5 €</option>
-      <option value="10">Alle 10 €</option>
-      <option value="20">Alle 20 €</option>
-    </select>
+    <!-- VÄLIAIKAINEN LISÄÄ TUOTE -PAINIKE -->
+    <div style="margin: 20px 0;">
+      <button id="addProductBtn">Lisää tuote</button>
+    </div>
+
+    <!-- HAKU & SUODATTIMET -->
+    <div class="filters">
+      <input type="text" id="search" placeholder="Hae tuotteita...">
+      <select id="category">
+        <option value="">Kaikki kategoriat</option>
+      </select>
+      <select id="maxPrice">
+        <option value="">Ei hintarajaa</option>
+        <option value="5">Alle 5 €</option>
+        <option value="10">Alle 10 €</option>
+        <option value="20">Alle 20 €</option>
+      </select>
+    </div>
+
+    <!-- TUOTTEET -->
+    <div id="productsContainer"></div>
   </div>
 
-  <div id="categories"></div>
-</div>
+  <script>
+    const productsContainer = document.getElementById("productsContainer");
+    const searchInput = document.getElementById("search");
+    const categorySelect = document.getElementById("category");
+    const maxPriceSelect = document.getElementById("maxPrice");
+    const addProductBtn = document.getElementById("addProductBtn");
 
-<script>
-const SHEETS_JSON_URL = "https://opensheet.elk.sh/1wrk1OHqtDSLi7p67WlL-D7EwakeZIXgoH6tfX0gfH70/Tuotteet";
-
-// Haetaan tiedot Sheetsistä
-async function fetchProducts() {
-  const res = await fetch(SHEETS_JSON_URL);
-  const data = await res.json();
-  return data.map(r => ({
-    name: r['Tuotteen nimi'] || "",
-    category: r['Kategoria'] || "Muut",
-    price: Number(r['Tuotteen hinta']) || 0,
-    description: r['Tuotteen kuvaus'] || "",
-    link: r['linkki'] || "",
-    image: r['Lisää tuotteen kuva'] || ""
-  }));
-}
-
-// Piirretään tuotteet kategorioittain
-function renderCategories(products) {
-  const container = document.getElementById("categories");
-  container.innerHTML = "";
-
-  // Ryhmitellään kategoriat
-  const categories = {};
-  products.forEach(p => {
-    if(!categories[p.category]) categories[p.category] = [];
-    categories[p.category].push(p);
-  });
-
-  for(const cat in categories) {
-    const catDiv = document.createElement("div");
-    catDiv.className = "category";
-    catDiv.innerHTML = `<div class="category-header">${cat} (${categories[cat].length})</div><div class="products"></div>`;
-    const prodContainer = catDiv.querySelector(".products");
-
-    categories[cat].forEach(product => {
-      const div = document.createElement("div");
-      div.className = "product";
-      div.innerHTML = `
-        ${product.image ? `<img src="${product.image}" alt="${product.name}">` : ""}
-        ${product.link ? `<h3><a href="${product.link}" target="_blank">${product.name}</a></h3>` : `<h3>${product.name}</h3>`}
-        <p class="price">${product.price} €</p>
-        <p>${product.description}</p>
-      `;
-      prodContainer.appendChild(div);
+    addProductBtn.addEventListener("click", () => {
+      window.open("https://docs.google.com/forms/d/e/1FAIpQLSdIDAiTJpmkdyjl1Z-TxRzU10z3ZpO14lJvlZul3QQmIcxVmg/viewform", "_blank");
     });
 
-    // Klikkaus toggle
-    catDiv.querySelector(".category-header").addEventListener("click", ()=>{
-      prodContainer.style.display = prodContainer.style.display === "none" ? "grid" : "none";
-    });
+    const SHEETS_URL = "https://docs.google.com/spreadsheets/d/1wrk1OHqtDSLi7p67WlL-D7EwakeZIXgoH6tfX0gfH70/gviz/tq?tqx=out:json&gid=1198551523";
+    let productsData = [];
 
-    container.appendChild(catDiv);
-  }
-}
+    function renderProducts(data) {
+      productsContainer.innerHTML = "";
 
-// Haku
-function filterProducts() {
-  const search = document.getElementById("search").value.toLowerCase();
-  const maxPrice = document.getElementById("maxPrice").value;
+      const categories = Array.from(new Set(data.map(p => p.category).filter(c => c)));
 
-  document.querySelectorAll(".category").forEach(cat => {
-    let hasVisible = false;
-    const prods = cat.querySelectorAll(".product");
-    prods.forEach(p => {
-      const name = p.querySelector("h3").innerText.toLowerCase();
-      const desc = p.querySelector("p:last-child").innerText.toLowerCase();
-      const price = Number(p.querySelector(".price").innerText.replace(" €",""));
-      let visible = true;
-      if(search && !name.includes(search) && !desc.includes(search)) visible = false;
-      if(maxPrice && price > Number(maxPrice)) visible = false;
-      p.classList.toggle("hidden", !visible);
-      if(visible) hasVisible = true;
-    });
-    cat.style.display = hasVisible ? "block" : "none";
-  });
-}
+      // Päivitä kategoriavalikko
+      categorySelect.innerHTML = '<option value="">Kaikki kategoriat</option>' +
+        categories.map(c => `<option value="${c}">${c}</option>`).join("");
 
-// Init
-(async function(){
-  const products = await fetchProducts();
-  renderCategories(products);
-  document.getElementById("search").addEventListener("input", filterProducts);
-  document.getElementById("maxPrice").addEventListener("change", filterProducts);
-})();
-</script>
+      categories.forEach(category => {
+        const categoryDiv = document.createElement("div");
+        categoryDiv.className = "category";
+
+        const h2 = document.createElement("h2");
+        h2.textContent = category;
+        h2.addEventListener("click", () => {
+          productsGrid.classList.toggle("hidden");
+        });
+
+        const productsGrid = document.createElement("div");
+        productsGrid.className = "products";
+
+        data.filter(p => p.category === category).forEach(product => {
+          const div = document.createElement("div");
+          div.className = "product";
+          div.dataset.name = product.name.toLowerCase();
+          div.dataset.description = (product.description || "").toLowerCase();
+          div.dataset.category = product.category;
+          div.dataset.price = product.price;
+
+          div.innerHTML = `
+            ${product.image ? `<img src="${product.image}" alt="${product.name}">` : ""}
+            ${product.link ? `<h3><a href="${product.link}" target="_blank">${product.name}</a></h3>` : `<h3>${product.name}</h3>`}
+            <p class="price">${product.price} €</p>
+            <p>${product.description}</p>
+          `;
+
+          productsGrid.appendChild(div);
+        });
+
+        categoryDiv.appendChild(h2);
+        categoryDiv.appendChild(productsGrid);
+        productsContainer.appendChild(categoryDiv);
+      });
+
+      filterProducts();
+    }
+
+    function filterProducts() {
+      const search = searchInput.value.toLowerCase();
+      const categoryFilter = categorySelect.value;
+      const maxPrice = maxPriceSelect.value;
+
+      const products = document.querySelectorAll(".product");
+      products.forEach(product => {
+        const name = product.dataset.name;
+        const desc = product.dataset.description;
+        const productCategory = product.dataset.category;
+        const price = Number(product.dataset.price);
+
+        let visible = true;
+        if (search && !(name.includes(search) || desc.includes(search))) visible = false;
+        if (categoryFilter && productCategory !== categoryFilter) visible = false;
+        if (maxPrice && price > Number(maxPrice)) visible = false;
+
+        product.classList.toggle("hidden", !visible);
+      });
+
+      // Piilota kategoriat, joissa kaikki tuotteet piilotettu
+      document.querySelectorAll(".category").forEach(cat => {
+        const productsInCat = cat.querySelectorAll(".product");
+        const anyVisible = Array.from(productsInCat).some(p => !p.classList.contains("hidden"));
+        cat.style.display = anyVisible ? "" : "none";
+      });
+    }
+
+    searchInput.addEventListener("input", filterProducts);
+    categorySelect.addEventListener("change", filterProducts);
+    maxPriceSelect.addEventListener("change", filterProducts);
+
+    fetch(SHEETS_URL)
+      .then(res => res.text())
+      .then(text => {
+        const json = JSON.parse(text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1));
+        const rows = json.table.rows;
+
+        productsData = rows.map(r => ({
+          name: r.c[1]?.v || "",
+          category: r.c[2]?.v || "",
+          price: r.c[3]?.v || 0,
+          description: r.c[4]?.v || "",
+          link: r.c[5]?.v || "",
+          image: r.c[6]?.v || ""
+        }));
+
+        renderProducts(productsData);
+      })
+      .catch(err => {
+        console.error(err);
+        productsContainer.innerHTML = "<p>Tuotteita ei voitu ladata.</p>";
+      });
+  </script>
 
 </body>
 </html>
