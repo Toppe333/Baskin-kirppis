@@ -45,14 +45,31 @@
     }
 
     /* TUOTTEET */
+    .category {
+      margin-bottom: 20px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    .category h2 {
+      margin: 0;
+      padding: 10px 15px;
+      cursor: pointer;
+      background-color: #eee;
+      border-bottom: 1px solid #ddd;
+      user-select: none;
+    }
+
     .products {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
       gap: 20px;
+      padding: 15px;
     }
 
     .product {
-      background: white;
+      background: #fafafa;
       padding: 15px;
       border-radius: 6px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.08);
@@ -106,11 +123,9 @@
     <!-- HAKU & SUODATTIMET -->
     <div class="filters">
       <input type="text" id="search" placeholder="Hae tuotteita...">
-
       <select id="category">
         <option value="">Kaikki kategoriat</option>
       </select>
-
       <select id="maxPrice">
         <option value="">Ei hintarajaa</option>
         <option value="5">Alle 5 €</option>
@@ -120,48 +135,66 @@
     </div>
 
     <!-- TUOTTEET -->
-    <div class="products" id="products"></div>
+    <div id="productsContainer"></div>
   </div>
 
   <script>
-    const productsContainer = document.getElementById("products");
+    const productsContainer = document.getElementById("productsContainer");
     const searchInput = document.getElementById("search");
     const categorySelect = document.getElementById("category");
     const maxPriceSelect = document.getElementById("maxPrice");
     const addProductBtn = document.getElementById("addProductBtn");
 
-    // Väliaikainen painike avaa Google Formin uuteen välilehteen
     addProductBtn.addEventListener("click", () => {
       window.open("https://docs.google.com/forms/d/e/1FAIpQLSdIDAiTJpmkdyjl1Z-TxRzU10z3ZpO14lJvlZul3QQmIcxVmg/viewform", "_blank");
     });
 
-    // Sheets JSONP-linkki
     const SHEETS_URL = "https://docs.google.com/spreadsheets/d/1wrk1OHqtDSLi7p67WlL-D7EwakeZIXgoH6tfX0gfH70/gviz/tq?tqx=out:json&gid=1198551523";
-
     let productsData = [];
 
     function renderProducts(data) {
       productsContainer.innerHTML = "";
 
-      // Päivitä kategoriavalikko automaattisesti
       const categories = Array.from(new Set(data.map(p => p.category).filter(c => c)));
-      categorySelect.innerHTML = '<option value="">Kaikki kategoriat</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join("");
 
-      data.forEach(product => {
-        const div = document.createElement("div");
-        div.className = "product";
-        div.dataset.name = product.name.toLowerCase();
-        div.dataset.category = product.category;
-        div.dataset.price = product.price;
+      // Päivitä kategoriavalikko
+      categorySelect.innerHTML = '<option value="">Kaikki kategoriat</option>' +
+        categories.map(c => `<option value="${c}">${c}</option>`).join("");
 
-        div.innerHTML = `
-          ${product.image ? `<img src="${product.image}" alt="${product.name}">` : ""}
-          ${product.link ? `<h3><a href="${product.link}" target="_blank">${product.name}</a></h3>` : `<h3>${product.name}</h3>`}
-          <p class="price">${product.price} €</p>
-          <p>${product.description}</p>
-        `;
+      categories.forEach(category => {
+        const categoryDiv = document.createElement("div");
+        categoryDiv.className = "category";
 
-        productsContainer.appendChild(div);
+        const h2 = document.createElement("h2");
+        h2.textContent = category;
+        h2.addEventListener("click", () => {
+          productsGrid.classList.toggle("hidden");
+        });
+
+        const productsGrid = document.createElement("div");
+        productsGrid.className = "products";
+
+        data.filter(p => p.category === category).forEach(product => {
+          const div = document.createElement("div");
+          div.className = "product";
+          div.dataset.name = product.name.toLowerCase();
+          div.dataset.description = (product.description || "").toLowerCase();
+          div.dataset.category = product.category;
+          div.dataset.price = product.price;
+
+          div.innerHTML = `
+            ${product.image ? `<img src="${product.image}" alt="${product.name}">` : ""}
+            ${product.link ? `<h3><a href="${product.link}" target="_blank">${product.name}</a></h3>` : `<h3>${product.name}</h3>`}
+            <p class="price">${product.price} €</p>
+            <p>${product.description}</p>
+          `;
+
+          productsGrid.appendChild(div);
+        });
+
+        categoryDiv.appendChild(h2);
+        categoryDiv.appendChild(productsGrid);
+        productsContainer.appendChild(categoryDiv);
       });
 
       filterProducts();
@@ -169,23 +202,29 @@
 
     function filterProducts() {
       const search = searchInput.value.toLowerCase();
-      const category = categorySelect.value;
+      const categoryFilter = categorySelect.value;
       const maxPrice = maxPriceSelect.value;
 
       const products = document.querySelectorAll(".product");
-
       products.forEach(product => {
         const name = product.dataset.name;
+        const desc = product.dataset.description;
         const productCategory = product.dataset.category;
         const price = Number(product.dataset.price);
 
         let visible = true;
-
-        if (search && !name.includes(search)) visible = false;
-        if (category && category !== productCategory) visible = false;
+        if (search && !(name.includes(search) || desc.includes(search))) visible = false;
+        if (categoryFilter && productCategory !== categoryFilter) visible = false;
         if (maxPrice && price > Number(maxPrice)) visible = false;
 
         product.classList.toggle("hidden", !visible);
+      });
+
+      // Piilota kategoriat, joissa kaikki tuotteet piilotettu
+      document.querySelectorAll(".category").forEach(cat => {
+        const productsInCat = cat.querySelectorAll(".product");
+        const anyVisible = Array.from(productsInCat).some(p => !p.classList.contains("hidden"));
+        cat.style.display = anyVisible ? "" : "none";
       });
     }
 
@@ -193,7 +232,6 @@
     categorySelect.addEventListener("change", filterProducts);
     maxPriceSelect.addEventListener("change", filterProducts);
 
-    // Lataa Google Sheets JSONP
     fetch(SHEETS_URL)
       .then(res => res.text())
       .then(text => {
@@ -216,5 +254,6 @@
         productsContainer.innerHTML = "<p>Tuotteita ei voitu ladata.</p>";
       });
   </script>
+
 </body>
 </html>
